@@ -2,7 +2,7 @@
 
 Make sure you have both python and ansible installed in your unix/linux system.
 
-main.yml
+lb.yml
 --------
 This is a playbook to configure haproxy.
 
