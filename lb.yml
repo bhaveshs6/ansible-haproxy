@@ -1,0 +1,81 @@
+#!/usr/local/bin/ansible-playbook
+- hosts: backend
+  tasks:
+  - name: Install python in target nodes
+    command:
+      cmd: yum install python3 -y
+      creates: /usr/bin/python3
+  - name: Install httpd
+    package:
+      name: httpd
+      state: present
+  - name: Copy files
+    copy:
+      content: "I am {{ ansible_facts.default_ipv4['address'] }}"
+      dest: /var/www/html/index.html
+    notify: Restart httpd
+  - name: Start firewall service
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+  - name: Add firewall rule
+    firewalld:
+      port: 80/tcp
+      immediate: yes
+      permanent: yes
+      state: enabled
+  handlers:
+  - name: Restart httpd
+    service:
+      name: httpd
+      state: restarted
+      enabled: yes
+
+- hosts: lb
+  vars:
+    config_file: /etc/haproxy/haproxy.cfg
+  tasks:
+  - name: Install Python 3
+    command:
+      cmd: yum install python3 -y
+      creates: /usr/bin/python3
+  - name: Install HAProxy
+    package:
+      name: haproxy
+      state: present
+  - name: Bind haproxy with port 80
+    replace:
+      path: "{{ config_file }}"
+      regexp: bind \*:5000
+      replace: bind *:80
+  - name: Removing predefined backend servers
+    lineinfile:
+      regexp: "    server  app.*"
+      dest: /etc/haproxy/haproxy.cfg
+      insertafter: "backend app"
+      state: absent
+  - name: Adding new backend servers
+    lineinfile:
+      line: "    server  {{ item }} {{ item }}:80 check"
+      dest: "{{ config_file }}"
+      insertafter: "backend app\n    balance"
+    loop: "{{ groups.backend }}"
+    notify: Restart haproxy
+  - name: Start firewall service
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+  - name: Add firewall rule
+    firewalld:
+      port: 80/tcp
+      immediate: yes
+      permanent: yes
+      state: enabled
+  handlers:    
+  - name: Restart haproxy
+    service:
+      name: haproxy
+      state: restarted
+      enabled: yes

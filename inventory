@@ -1,0 +1,6 @@
+[lb]
+192.168.43.192 ansible_ssh_pass=redhat
+
+[backend]
+192.168.43.123 ansible_ssh_pass=redhat
+192.168.43.204 ansible_ssh_pass=redhat
